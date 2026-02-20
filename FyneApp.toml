@@ -1,0 +1,8 @@
+Website = "https://github.com/craig-warner/spinner-fyne"
+
+[Details]
+  Icon = "assets/twister-spinner.png"
+  Name = "Spinner"
+  ID = "com.warnerbits.spinner"
+  Version = "1.0.0"
+  Build = 6
