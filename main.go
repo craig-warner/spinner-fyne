@@ -12,6 +12,7 @@ import (
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/layout"
+	"fyne.io/fyne/v2/widget"
 )
 
 const DEBUG = false
@@ -320,9 +321,11 @@ func (m *Spinner) DrawOneDotNotBlack(use_px, use_py int) color.Color {
 	return (ret_color)
 }
 */
-/*
+
 func (m *Spinner) DrawSpinner(image_num int) {
+	fmt.Printf("Hide %d\n", image_num)
 	m.spinner_images[m.cur_spinner_image].Hide()
+	fmt.Printf("Show %d\n", image_num)
 	m.spinner_images[image_num].Show()
 }
 
@@ -345,11 +348,13 @@ func (m *Spinner) UpdateSpinner() {
 		panic(1)
 	}
 }
-*/
 
 func (m *Spinner) UpdateSome() {
+	fmt.Print(m.mode)
 	if m.mode == 0 {
-		//m.UpdateSpinner()
+		fmt.Print(m.spinner_mode)
+		fmt.Print(m.tick)
+		m.UpdateSpinner()
 		m.tick = (m.tick + 1) % 48
 		if m.tick == 0 {
 			//m.spinner_mode = math.rand.Int() % 4
@@ -491,6 +496,15 @@ func main() {
 	mySpinner := NewSpinner()
 	// Raster
 	//myRaster := canvas.NewRasterWithPixels(mySpinner.DrawOneDot)
+	//colOneContent.Add(myRaster)
+
+	image_holder := canvas.NewImageFromFile("assets/images/banner/touchtostart.png")
+	image_holder.Show()
+	fyne_size := fyne.NewSize(10.0, 10.0)
+	image_holder.Resize(fyne_size)
+	colOneContent.Add(image_holder)
+	SomeText := widget.NewLabel("Some Text")
+	colOneContent.Add(SomeText)
 
 	topContent := container.New(layout.NewHBoxLayout())
 	topContent.Add(layout.NewSpacer())
