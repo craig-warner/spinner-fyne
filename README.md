@@ -3,9 +3,15 @@ Spinner is a automated Spinner for the game of Twister.  This app lets all peopl
 
 # Running on Windows
 ## msys-x64
+## Making go.mod
+```
+go mod tidy
+```
+## Making executable 
 ```
 go build -v *.go
 ```
+## running program 
 ```
 go run -v *.go
 ```
