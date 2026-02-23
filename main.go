@@ -502,6 +502,8 @@ func main() {
 	//myRaster := canvas.NewRasterWithPixels(mySpinner.DrawOneDot)
 	//colOneContent.Add(myRaster)
 	var image_holder *canvas.Image
+	//var image_holders []*canvas.Image
+	stack := container.New(layout.NewStackLayout())
 	for image_num := range 48 {
 		image_holder = mySpinner.GetSpinnerImage(image_num)
 		image_holder.SetMinSize(fyne.NewSize(349, 250))
@@ -511,8 +513,10 @@ func main() {
 		} else {
 			image_holder.Hide()
 		}
-		colOneContent.Add(image_holder)
+		//image_holders = append(image_holders, image_holder)
+		stack.Add(image_holder)
 	}
+	colOneContent.Add(stack)
 	image_holder = canvas.NewImageFromFile("assets/images/banner/touchtostart.png")
 	//image_holder.FillMode = canvas.ImageFillContain // Does not work
 	image_holder.SetMinSize(fyne.NewSize(270, 230))
