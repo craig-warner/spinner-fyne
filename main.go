@@ -12,7 +12,6 @@ import (
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/layout"
-	"fyne.io/fyne/v2/widget"
 )
 
 const DEBUG = false
@@ -323,42 +322,49 @@ func (m *Spinner) DrawOneDotNotBlack(use_px, use_py int) color.Color {
 */
 
 func (m *Spinner) DrawSpinner(image_num int) {
-	fmt.Printf("Hide %d\n", image_num)
+	//fmt.Printf("Hide %d\n", image_num)
 	m.spinner_images[m.cur_spinner_image].Hide()
-	fmt.Printf("Show %d\n", image_num)
+	//fmt.Printf("Show %d\n", image_num)
 	m.spinner_images[image_num].Show()
 }
 
 func (m *Spinner) UpdateSpinner() {
-	if m.spinner_mode == 0 {
-		// Still
-		m.DrawSpinner(0)
-	} else if m.spinner_mode == 1 {
-		// Spin
-		m.DrawSpinner(m.tick)
-	} else if m.spinner_mode == 2 {
-		// Reverse Spin
-		m.DrawSpinner(47 - m.tick)
-	} else if m.spinner_mode == 3 {
-		// x3 Spin
-		m.DrawSpinner((m.tick * 3) % 48)
-	} else if m.spinner_mode == 4 {
-		m.DrawSpinner(m.spinner_wiggle[m.tick])
+	var new_spinner_image_num int
+	if m.tick == 48 {
+		new_spinner_image_num = 0
 	} else {
-		panic(1)
+		if m.spinner_mode == 0 {
+			// Still
+			new_spinner_image_num = 0
+		} else if m.spinner_mode == 1 {
+			// Spin
+			new_spinner_image_num = m.tick
+		} else if m.spinner_mode == 2 {
+			// Reverse Spin
+			new_spinner_image_num = 47 - m.tick
+		} else if m.spinner_mode == 3 {
+			// x3 Spin
+			new_spinner_image_num = ((m.tick * 3) % 48)
+		} else if m.spinner_mode == 4 {
+			new_spinner_image_num = (m.spinner_wiggle[m.tick])
+		} else {
+			panic(1)
+		}
 	}
+	m.DrawSpinner(new_spinner_image_num)
+	m.cur_spinner_image = new_spinner_image_num
 }
 
 func (m *Spinner) UpdateSome() {
-	fmt.Print(m.mode)
+	//fmt.Print(m.mode)
 	if m.mode == 0 {
-		fmt.Print(m.spinner_mode)
-		fmt.Print(m.tick)
+		//fmt.Print(m.spinner_mode)
+		//fmt.Print(m.tick)
 		m.UpdateSpinner()
-		m.tick = (m.tick + 1) % 48
+		m.tick = (m.tick + 1) % 49
 		if m.tick == 0 {
 			//m.spinner_mode = math.rand.Int() % 4
-			m.spinner_mode = (m.spinner_mode + 1) % 4
+			m.spinner_mode = (m.spinner_mode + 1) % 5
 		}
 	} else if m.mode == 1 {
 		//m.UpdatePlay()
@@ -465,6 +471,8 @@ func NewSpinner() Spinner {
 
 func main() {
 
+	spinnerContent := container.New(layout.NewHBoxLayout())
+	bannerContent := container.New(layout.NewHBoxLayout())
 	colOneContent := container.New(layout.NewVBoxLayout())
 
 	myApp := app.New()
@@ -506,8 +514,8 @@ func main() {
 	stack := container.New(layout.NewStackLayout())
 	for image_num := range 48 {
 		image_holder = mySpinner.GetSpinnerImage(image_num)
-		image_holder.SetMinSize(fyne.NewSize(349, 250))
-		image_holder.Move(fyne.NewPos(0.0, 0.0))
+		image_holder.SetMinSize(fyne.NewSize(350, 100))
+		//image_holder.Move(fyne.NewPos(0.0, 0.0))
 		if image_num == 0 {
 			image_holder.Show()
 		} else {
@@ -516,16 +524,26 @@ func main() {
 		//image_holders = append(image_holders, image_holder)
 		stack.Add(image_holder)
 	}
-	colOneContent.Add(stack)
+	spinnerContent.Add(layout.NewSpacer())
+	spinnerContent.Add(stack)
+	spinnerContent.Add(layout.NewSpacer())
+
 	image_holder = canvas.NewImageFromFile("assets/images/banner/touchtostart.png")
 	//image_holder.FillMode = canvas.ImageFillContain // Does not work
 	image_holder.SetMinSize(fyne.NewSize(270, 230))
 	image_holder.Show()
 	//fyne_size := fyne.NewSize(10.0, 10.0)
 	//image_holder.Resize(fyne_size)
-	colOneContent.Add(image_holder)
-	SomeText := widget.NewLabel("Some Text")
-	colOneContent.Add(SomeText)
+	bannerContent.Add(layout.NewSpacer())
+	bannerContent.Add(image_holder)
+	bannerContent.Add(layout.NewSpacer())
+
+	//SomeText := widget.NewLabel("Some Text")
+	//colOneContent.Add(SomeText)
+	colOneContent.Add(layout.NewSpacer())
+	colOneContent.Add(spinnerContent)
+	colOneContent.Add(bannerContent)
+	colOneContent.Add(layout.NewSpacer())
 
 	topContent := container.New(layout.NewHBoxLayout())
 	topContent.Add(layout.NewSpacer())
