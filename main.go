@@ -120,10 +120,10 @@ JSON Structure Defining Colors
 */
 const (
 	all_colors_str = `[
-		{red:248, green: 9, blue:43},
-		{red:9, green:19, 248, blue: 248},
-		{red:14, green: 248, blue:9},
-		{red:228 green:248, blue: 9}
+		{red:248, green:9, blue:43},
+		{red:9, green:19, blue:248},
+		{red:14, green:248, blue:9},
+		{red:228 green:248, blue:9}
 	]`
 )
 
@@ -170,6 +170,8 @@ type Spinner struct {
 	parts_image_y     []int
 	parts_image_names []string
 	parts_images      []*canvas.Image
+	// Dots
+	dots []*canvas.Circle
 	// Colors
 	all_colors []Color
 	// Speed
@@ -356,6 +358,34 @@ func (m *Spinner) UpdateSpinner() {
 	m.cur_spinner_image = new_spinner_image_num
 }
 
+func (m *Spinner) UpdatePlay() {
+	var dot_num int
+	if m.tick == 0 {
+		// Hide All
+		// Hide Parts
+		for part_num := range 4 {
+			m.parts_images[part_num].Hide()
+		}
+		// Hide Dots
+		for dot_num := range 10 {
+			// Hide Dot for current color
+			m.dots[dot_num].Hide()
+		}
+	} else if m.tick == 10 {
+		fmt.Print("Show Part")
+		// Show part
+		m.parts_images[m.cur_part].Show()
+		//m.parts_images[m.cur_part].Show()
+	} else if m.tick > 50 {
+		if m.tick%50 == 0 {
+			fmt.Print("Show Dot")
+			// Draw dot
+			dot_num = (m.tick / 50 % 10)
+			m.dots[dot_num].Show()
+		}
+	}
+}
+
 func (m *Spinner) UpdateSome() {
 	//fmt.Print(m.mode)
 	if m.mode == 0 {
@@ -368,14 +398,31 @@ func (m *Spinner) UpdateSome() {
 			m.spinner_mode = (m.spinner_mode + 1) % 5
 		}
 	} else if m.mode == 1 {
-		//m.UpdatePlay()
+		fmt.Print(m.tick)
+		m.UpdatePlay()
 		// Tick Update
 		m.tick = (m.tick + 1) % m.speed_ticks_per_play
+		if m.tick == 0 {
+			m.cur_part = (m.cur_part + 1) % 4
+		}
 	}
 }
 
 func (m *Spinner) GetSpinnerImage(image_num int) *canvas.Image {
 	return (m.spinner_images[image_num])
+}
+
+func (m *Spinner) DoPlay() {
+	// Set mode
+	m.mode = 1
+	// reset timer
+	m.tick = 0
+	// Hide Banner
+	m.banner_image.Hide()
+	// Hide Spinner
+	for spinner_image_number := range 48 {
+		m.spinner_images[spinner_image_number].Hide()
+	}
 }
 
 func NewSpinner() Spinner {
@@ -404,7 +451,7 @@ func NewSpinner() Spinner {
 		// Speed
 		speed_setting:        1,
 		speed_seconds:        1,   // FIXME: Ignored
-		speed_ticks_per_play: 100, // FIXME: Make configurable
+		speed_ticks_per_play: 500, // FIXME: Make configurable
 		// Window
 		//cur_w, cur_h    int
 		// Color
@@ -451,8 +498,10 @@ func NewSpinner() Spinner {
 		fmt.Printf("Unable to marshal JSON due to %s", err)
 		panic(1)
 	}
-	for _, img_name := range m.parts_image_names {
+	for part_num, img_name := range m.parts_image_names {
 		m.parts_images = append(m.parts_images, canvas.NewImageFromFile(img_name))
+		m.parts_images[part_num].Hide()
+		m.parts_images[part_num].SetMinSize(fyne.NewSize(100, 200))
 	}
 	err = json.Unmarshal([]byte(all_image_width_str), &m.parts_image_x)
 	if err != nil {
@@ -462,6 +511,20 @@ func NewSpinner() Spinner {
 	err = json.Unmarshal([]byte(all_image_height_str), &m.parts_image_y)
 	if err != nil {
 		fmt.Printf("Unable to marshal JSON due to %s", err)
+	}
+	// Dots
+	for dot_num := range 10 {
+		m.dots = append(m.dots, canvas.NewCircle(color.NRGBA{
+			//	m.all_colors[0].Red,
+			//	m.all_colors[0].Green,
+			//	m.all_colors[0].Blue, 0xff}))
+			0xf0,
+			0x00,
+			0x00,
+			0xff}))
+		m.dots[dot_num].Hide()
+		m.dots[dot_num].Move(fyne.NewPos(30.0, 30.0))
+		m.dots[dot_num].Resize(fyne.NewSize(40.0, 40.0))
 	}
 	return m
 }
@@ -475,6 +538,9 @@ func main() {
 	spinnerContent := container.New(layout.NewHBoxLayout())
 	bannerContent := container.New(layout.NewHBoxLayout())
 	colOneContent := container.New(layout.NewVBoxLayout())
+
+	// Spinner
+	mySpinner := NewSpinner()
 
 	myApp := app.New()
 	myWindow := myApp.NewWindow("Spinner")
@@ -496,9 +562,12 @@ func main() {
 		//fmt.Println("In DoQuit:")
 		os.Exit(0)
 	})
+	menuItemPlay := fyne.NewMenuItem("Play", func() {
+		mySpinner.DoPlay()
+	})
 	//	menuControl:= fyne.NewMenu("Control", menuItemColor, menuItemZoom, menuItemQuit);
 	//menuControl := fyne.NewMenu("Control", menuItemGenerate, menuItemQuit)
-	menuControl := fyne.NewMenu("Control", menuItemQuit)
+	menuControl := fyne.NewMenu("Control", menuItemPlay, menuItemQuit)
 	// About Menu Set up
 	menuItemAbout := fyne.NewMenuItem("About...", func() {
 		dialog.ShowInformation("About Spinner v1.0.0", "Author: Craig Warner \n\ngithub.com/craig-warner/spinner-fyne", myWindow)
@@ -507,8 +576,6 @@ func main() {
 	mainMenu := fyne.NewMainMenu(menuControl, menuHelp)
 	myWindow.SetMainMenu(mainMenu)
 
-	// Mandelbrot
-	mySpinner := NewSpinner()
 	// Raster
 	//myRaster := canvas.NewRasterWithPixels(mySpinner.DrawOneDot)
 	//colOneContent.Add(myRaster)
@@ -541,6 +608,27 @@ func main() {
 	//image_holder.FillMode = canvas.ImageFillContain // Does not work
 	image_holder.SetMinSize(fyne.NewSize(270, 230))
 	image_holder.Show()
+	mySpinner.banner_image = image_holder
+	// Play
+	play_stack := container.New(layout.NewStackLayout())
+	part_stack := container.New(layout.NewStackLayout())
+	part_vbox := container.New(layout.NewVBoxLayout())
+	part_hbox := container.New(layout.NewHBoxLayout())
+	// Dots
+	for dot_num := range 10 {
+		play_stack.Add(mySpinner.dots[dot_num])
+	}
+	// Parts
+	for part_num := range 4 {
+		part_stack.Add(mySpinner.parts_images[part_num])
+	}
+	part_hbox.Add(layout.NewSpacer())
+	part_hbox.Add(part_stack)
+	part_hbox.Add(layout.NewSpacer())
+	part_vbox.Add(layout.NewSpacer())
+	part_vbox.Add(part_hbox)
+	part_vbox.Add(layout.NewSpacer())
+	play_stack.Add(part_vbox)
 	//fyne_size := fyne.NewSize(10.0, 10.0)
 	//image_holder.Resize(fyne_size)
 	bannerContent.Add(layout.NewSpacer())
@@ -560,6 +648,7 @@ func main() {
 	topContent.Add(layout.NewSpacer())
 
 	big_stack.Add(topContent)
+	big_stack.Add(play_stack)
 
 	wholeContent := container.New(layout.NewVBoxLayout())
 	wholeContent.Add(layout.NewSpacer())
