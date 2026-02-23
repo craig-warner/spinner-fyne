@@ -367,6 +367,10 @@ func (m *Spinner) UpdateSome() {
 	}
 }
 
+func (m *Spinner) GetSpinnerImage(image_num int) *canvas.Image {
+	return (m.spinner_images[image_num])
+}
+
 func NewSpinner() Spinner {
 	m := Spinner{
 		mode:         0,
@@ -497,11 +501,24 @@ func main() {
 	// Raster
 	//myRaster := canvas.NewRasterWithPixels(mySpinner.DrawOneDot)
 	//colOneContent.Add(myRaster)
-
-	image_holder := canvas.NewImageFromFile("assets/images/banner/touchtostart.png")
+	var image_holder *canvas.Image
+	for image_num := range 48 {
+		image_holder = mySpinner.GetSpinnerImage(image_num)
+		image_holder.SetMinSize(fyne.NewSize(349, 250))
+		image_holder.Move(fyne.NewPos(0.0, 0.0))
+		if image_num == 0 {
+			image_holder.Show()
+		} else {
+			image_holder.Hide()
+		}
+		colOneContent.Add(image_holder)
+	}
+	image_holder = canvas.NewImageFromFile("assets/images/banner/touchtostart.png")
+	//image_holder.FillMode = canvas.ImageFillContain // Does not work
+	image_holder.SetMinSize(fyne.NewSize(270, 230))
 	image_holder.Show()
-	fyne_size := fyne.NewSize(10.0, 10.0)
-	image_holder.Resize(fyne_size)
+	//fyne_size := fyne.NewSize(10.0, 10.0)
+	//image_holder.Resize(fyne_size)
 	colOneContent.Add(image_holder)
 	SomeText := widget.NewLabel("Some Text")
 	colOneContent.Add(SomeText)
