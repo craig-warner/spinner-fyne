@@ -579,11 +579,12 @@ func main() {
 	// Raster
 	//myRaster := canvas.NewRasterWithPixels(mySpinner.DrawOneDot)
 	//colOneContent.Add(myRaster)
+	bigger_stack := container.New(layout.NewStackLayout())
 	big_stack := container.New(layout.NewStackLayout())
 	rect := canvas.NewRectangle(color.Black)
 	rect.SetMinSize(fyne.NewSize(WINDOW_SIZE, WINDOW_SIZE))
 	rect.Show()
-	big_stack.Add(rect)
+	bigger_stack.Add(rect)
 
 	var image_holder *canvas.Image
 	//var image_holders []*canvas.Image
@@ -650,9 +651,11 @@ func main() {
 	big_stack.Add(topContent)
 	big_stack.Add(play_stack)
 
+	bigger_stack.Add(big_stack)
+
 	wholeContent := container.New(layout.NewVBoxLayout())
 	wholeContent.Add(layout.NewSpacer())
-	wholeContent.Add(big_stack)
+	wholeContent.Add(bigger_stack)
 	wholeContent.Add(layout.NewSpacer())
 	//wholeContent.Add(bottomContent)
 
@@ -662,6 +665,7 @@ func main() {
 		for {
 			mySpinner.UpdateSome()
 			//myRaster.Refresh()
+			myWindow.Canvas().Refresh(wholeContent)
 			time.Sleep(time.Nanosecond * 100000000)
 		}
 	}()
