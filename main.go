@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"image/color"
 	"os"
 	"time"
 
@@ -478,6 +479,8 @@ func main() {
 	myApp := app.New()
 	myWindow := myApp.NewWindow("Spinner")
 	myWindow.SetPadded(false)
+	// Center
+	myWindow.CenterOnScreen()
 
 	// Resize ignored by Mobile Platforms
 	// - Mobile platforms are always full screen
@@ -509,6 +512,12 @@ func main() {
 	// Raster
 	//myRaster := canvas.NewRasterWithPixels(mySpinner.DrawOneDot)
 	//colOneContent.Add(myRaster)
+	big_stack := container.New(layout.NewStackLayout())
+	rect := canvas.NewRectangle(color.Black)
+	rect.SetMinSize(fyne.NewSize(WINDOW_SIZE, WINDOW_SIZE))
+	rect.Show()
+	big_stack.Add(rect)
+
 	var image_holder *canvas.Image
 	//var image_holders []*canvas.Image
 	stack := container.New(layout.NewStackLayout())
@@ -550,9 +559,11 @@ func main() {
 	topContent.Add(colOneContent)
 	topContent.Add(layout.NewSpacer())
 
+	big_stack.Add(topContent)
+
 	wholeContent := container.New(layout.NewVBoxLayout())
 	wholeContent.Add(layout.NewSpacer())
-	wholeContent.Add(topContent)
+	wholeContent.Add(big_stack)
 	wholeContent.Add(layout.NewSpacer())
 	//wholeContent.Add(bottomContent)
 
