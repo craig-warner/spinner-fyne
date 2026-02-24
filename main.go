@@ -375,6 +375,7 @@ func (m *Spinner) UpdatePlay() {
 		fmt.Print("Show Part")
 		// Show part
 		m.parts_images[m.cur_part].Show()
+		m.parts_images[m.cur_part].Refresh()
 		//m.parts_images[m.cur_part].Show()
 	} else if m.tick > 50 {
 		if m.tick%50 == 0 {
@@ -382,6 +383,7 @@ func (m *Spinner) UpdatePlay() {
 			// Draw dot
 			dot_num = (m.tick / 50 % 10)
 			m.dots[dot_num].Show()
+			//m.dots[dot_num].Refresh()
 		}
 	}
 }
@@ -538,9 +540,18 @@ func main() {
 	spinnerContent := container.New(layout.NewHBoxLayout())
 	bannerContent := container.New(layout.NewHBoxLayout())
 	colOneContent := container.New(layout.NewVBoxLayout())
+	play_stack := container.New(layout.NewStackLayout())
+	play_rect := canvas.NewRectangle(color.Black)
 
 	// Spinner
 	mySpinner := NewSpinner()
+
+	// Parts
+	/*
+		for part_num := range 4 {
+			play_stack.Add(mySpinner.parts_images[part_num])
+		}
+	*/
 
 	myApp := app.New()
 	myWindow := myApp.NewWindow("Spinner")
@@ -548,11 +559,18 @@ func main() {
 	// Center
 	myWindow.CenterOnScreen()
 
+	/*
+		myPlayWindow := myApp.NewWindow("Playing Twister")
+		myPlayWindow.CenterOnScreen()
+		myPlayWindow.Hide()
+	*/
+
 	// Resize ignored by Mobile Platforms
 	// - Mobile platforms are always full screen
 	// - 27 is a hack determined by Ubuntu/Gnome
 	//myWindow.Resize(fyne.NewSize(256, (256 + 27)))
 	myWindow.Resize(fyne.NewSize(WINDOW_SIZE, (WINDOW_SIZE + 27)))
+	//myPlayWindow.Resize(fyne.NewSize(WINDOW_SIZE, (WINDOW_SIZE + 27)))
 
 	// Control Menu Set up
 	//	menuItemGenerate := fyne.NewMenuItem("Generate Background", func() {
@@ -563,7 +581,49 @@ func main() {
 		os.Exit(0)
 	})
 	menuItemPlay := fyne.NewMenuItem("Play", func() {
+		/*
+			myPlayWindow := myApp.NewWindow("Playing Twister")
+			myPlayWindow.CenterOnScreen()
+			myPlayWindow.Show()
+			myPlayWindow.Resize(fyne.NewSize(WINDOW_SIZE, (WINDOW_SIZE + 27)))
+		*/
+		// Play
+		//play_rect := canvas.NewRectangle(color.Black)
+		//play_rect.SetMinSize(fyne.NewSize(WINDOW_SIZE, WINDOW_SIZE))
+		//play_rect.Show()
+		/*
+			play_stack := container.New(layout.NewStackLayout())
+			//play_stack.Add(play_rect)
+			part_stack := container.New(layout.NewStackLayout())
+			part_vbox := container.New(layout.NewVBoxLayout())
+			part_hbox := container.New(layout.NewHBoxLayout())
+			// Dots
+			for dot_num := range 10 {
+				play_stack.Add(mySpinner.dots[dot_num])
+			}
+			// Parts
+			for part_num := range 4 {
+				play_stack.Add(mySpinner.parts_images[part_num])
+			}
+			part_hbox.Add(layout.NewSpacer())
+			part_hbox.Add(part_stack)
+			part_hbox.Add(layout.NewSpacer())
+			part_vbox.Add(layout.NewSpacer())
+			part_vbox.Add(part_hbox)
+			part_vbox.Add(layout.NewSpacer())
+			play_stack.Add(part_vbox)
+		*/
+		play_rect.Show()
 		mySpinner.DoPlay()
+		/*
+			go func() {
+				for {
+					mySpinner.UpdateSome()
+					time.Sleep(time.Nanosecond * 100000000)
+				}
+			}()
+			myPlayWindow.ShowAndRun()
+		*/
 	})
 	//	menuControl:= fyne.NewMenu("Control", menuItemColor, menuItemZoom, menuItemQuit);
 	//menuControl := fyne.NewMenu("Control", menuItemGenerate, menuItemQuit)
@@ -584,6 +644,7 @@ func main() {
 	rect := canvas.NewRectangle(color.Black)
 	rect.SetMinSize(fyne.NewSize(WINDOW_SIZE, WINDOW_SIZE))
 	rect.Show()
+	big_stack.Add(rect)
 	bigger_stack.Add(rect)
 
 	var image_holder *canvas.Image
@@ -611,7 +672,9 @@ func main() {
 	image_holder.Show()
 	mySpinner.banner_image = image_holder
 	// Play
-	play_stack := container.New(layout.NewStackLayout())
+	play_rect.SetMinSize(fyne.NewSize(WINDOW_SIZE, WINDOW_SIZE))
+	play_rect.Hide()
+	play_stack.Add(play_rect)
 	part_stack := container.New(layout.NewStackLayout())
 	part_vbox := container.New(layout.NewVBoxLayout())
 	part_hbox := container.New(layout.NewHBoxLayout())
@@ -649,8 +712,11 @@ func main() {
 	topContent.Add(layout.NewSpacer())
 
 	big_stack.Add(topContent)
+	// Parts
+	for part_num := range 4 {
+		big_stack.Add(mySpinner.parts_images[part_num])
+	}
 	big_stack.Add(play_stack)
-
 	bigger_stack.Add(big_stack)
 
 	wholeContent := container.New(layout.NewVBoxLayout())
@@ -660,15 +726,16 @@ func main() {
 	//wholeContent.Add(bottomContent)
 
 	myWindow.SetContent(wholeContent)
+	//myPlayWindow.SetContent(play_stack)
 
 	go func() {
 		for {
 			mySpinner.UpdateSome()
-			//myRaster.Refresh()
-			myWindow.Canvas().Refresh(wholeContent)
 			time.Sleep(time.Nanosecond * 100000000)
+			fyne.Do(func() {
+				big_stack.Refresh()
+			})
 		}
 	}()
-
 	myWindow.ShowAndRun()
 }
