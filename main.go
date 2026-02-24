@@ -188,6 +188,8 @@ type Spinner struct {
 	// Color
 	cur_color_num int
 	cur_part      int
+	// Canvas
+	canvas_size fyne.Size
 }
 
 type Color struct {
@@ -388,8 +390,10 @@ func (m *Spinner) UpdatePlay() {
 	}
 }
 
-func (m *Spinner) UpdateSome() {
+func (m *Spinner) UpdateSome(s fyne.Size) {
 	//fmt.Print(m.mode)
+	m.canvas_size = s
+	fmt.Print(s, "\n")
 	if m.mode == 0 {
 		//fmt.Print(m.spinner_mode)
 		//fmt.Print(m.tick)
@@ -720,17 +724,19 @@ func main() {
 	bigger_stack.Add(big_stack)
 
 	wholeContent := container.New(layout.NewVBoxLayout())
-	wholeContent.Add(layout.NewSpacer())
+	//wholeContent.Add(layout.NewSpacer())
 	wholeContent.Add(bigger_stack)
-	wholeContent.Add(layout.NewSpacer())
+	//wholeContent.Add(layout.NewSpacer())
 	//wholeContent.Add(bottomContent)
 
 	myWindow.SetContent(wholeContent)
 	//myPlayWindow.SetContent(play_stack)
 
+	var canvas_size fyne.Size
 	go func() {
 		for {
-			mySpinner.UpdateSome()
+			canvas_size = myWindow.Canvas().Size()
+			mySpinner.UpdateSome(canvas_size)
 			time.Sleep(time.Nanosecond * 100000000)
 			fyne.Do(func() {
 				big_stack.Refresh()

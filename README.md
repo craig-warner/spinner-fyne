@@ -73,9 +73,17 @@ sudo /home/craigwarner/go/bin/fyne get github.com/craig-warner/spinner-fyne
 # Development To Do
 
 ## Basic
+* dots
+* color for dots
+* record for parts
+* bottom hbox for parts record 
+* parts scaled for screen size
 
 ## Bugs 
-* None  
+* Resize has sapcer at botttom 
+* debug printouts 
+* colors don't parse
+* spinner does not look right for spinner_mode 1
 
 ## Enhancements
 * The who App 
