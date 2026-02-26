@@ -440,13 +440,14 @@ func (m *Spinner) UpdatePlay() {
 		}
 		m.cur_part = rand.Intn(4)
 		m.next_cur_color = rand.Intn(4)
-	} else if m.tick == 5*int(m.speed) {
-		fmt.Print("Show Part")
+	} else if m.tick == int(m.speed) {
+		//fmt.Print("Show Part")
 		// Show part
 		m.parts_images[m.cur_part].Show()
 		//m.parts_images[m.cur_part].Refresh()
 		//m.parts_images[m.cur_part].Show()
-	} else if m.tick == 25*int(m.speed) || (m.tick == 30*int(m.speed)) {
+		//} else if m.tick == 10*int(m.speed) || (m.tick == 30*int(m.speed)) {
+	} else if m.tick == 2*int(m.speed) {
 		//fmt.Printf("Show Dot : %d : %d \n", m.cur_part, m.next_cur_color)
 		// Draw dot
 		fyne.Do(func() { m.ShowDot(true, 0, m.next_cur_color) })
@@ -495,7 +496,7 @@ func (m *Spinner) UpdateSome(s fyne.Size) {
 		//fmt.Print(m.spinner_mode)
 		//fmt.Print(m.tick)
 		m.UpdateSpinner()
-		m.tick = (m.tick + 1) % 480
+		m.tick = (m.tick + 1) % 48
 		if m.tick == 0 {
 			//m.spinner_mode = math.rand.Int() % 4
 			m.spinner_mode = (m.spinner_mode + 1) % 5
@@ -515,9 +516,36 @@ func (m *Spinner) GetSpinnerImage(image_num int) *canvas.Image {
 	return (m.spinner_images[image_num])
 }
 
-func (m *Spinner) DoPlay() {
-	//
+func (m *Spinner) ResetRecord() {
+	m.left_hand_color = CCBlack
+	m.left_foot_color = CCBlack
+	m.right_foot_color = CCBlack
+	m.right_hand_color = CCBlack
+	for part := range 4 {
+		if part == 0 {
+			for cdot := range 4 {
+				m.lh_dots[cdot].Hide()
+			}
+		} else if part == 1 {
+			for cdot := range 4 {
+				m.lf_dots[cdot].Hide()
+			}
+		} else if part == 2 {
+			for cdot := range 4 {
+				m.rf_dots[cdot].Hide()
+			}
+		} else if part == 3 {
+			for cdot := range 4 {
+				m.rh_dots[cdot].Hide()
+			}
+		}
+	}
+}
 
+func (m *Spinner) DoPlay() {
+	// Reset Record
+	m.ResetRecord()
+	// Next Color Set Up
 	m.next_cur_color = rand.Intn(4)
 	// Set mode
 	m.mode = 1
@@ -671,7 +699,7 @@ func NewSpinner() Spinner {
 	}
 	// speed
 	m.speed = 5.0 // 5 seconds per spin
-	m.speed_ticks_per_play = int(m.speed) * 100
+	m.speed_ticks_per_play = int(m.speed) * 10
 	return m
 }
 
@@ -792,7 +820,7 @@ func main() {
 				layout.NewSpacer(),
 				widget.NewButton("Ok", func() {
 					mySpinner.speed = new_speed
-					mySpinner.speed_ticks_per_play = 100 * int(new_speed)
+					mySpinner.speed_ticks_per_play = 10 * int(new_speed)
 					// fine grain pan
 					popup.Hide()
 				}),
@@ -944,7 +972,7 @@ func main() {
 		for {
 			canvas_size = myWindow.Canvas().Size()
 			mySpinner.UpdateSome(canvas_size)
-			time.Sleep(time.Nanosecond * 10000000)
+			time.Sleep(time.Nanosecond * 100000000)
 			fyne.Do(func() {
 				big_stack.Refresh()
 			})
