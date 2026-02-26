@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"image/color"
+	"math/rand"
 	"os"
 	"time"
 
@@ -13,6 +14,7 @@ import (
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/layout"
+	"fyne.io/fyne/v2/widget"
 )
 
 const DEBUG = false
@@ -21,6 +23,16 @@ const WINDOW_SIZE = 512
 
 const (
 	MAX_DISPLAY_SIZE = 10000
+)
+
+type CalledColor int
+
+const (
+	CCRed    CalledColor = 0
+	CCGreen  CalledColor = 1
+	CCBlue   CalledColor = 2
+	CCYellow CalledColor = 3
+	CCBlack  CalledColor = 4
 )
 
 /*
@@ -77,8 +89,8 @@ const (
     "assets/images/spinner/spinner_3d0047.png" ]`
 
 	all_parts_str = `[
-    "assets/images/parts/white_left_foot.png",
     "assets/images/parts/white_left_hand.png",
+    "assets/images/parts/white_left_foot.png",
     "assets/images/parts/white_right_foot.png",
     "assets/images/parts/white_right_hand.png"
 	]`
@@ -119,12 +131,7 @@ JSON Structure Defining Colors
 	self.curColorRGB = ["rgb(248,9,43)", "rgb(9,19,248)", "rgb(14,248,9)", "rgb(228,248,9)"]
 */
 const (
-	all_colors_str = `[
-		{red:248, green:9, blue:43},
-		{red:9, green:19, blue:248},
-		{red:14, green:248, blue:9},
-		{red:228 green:248, blue:9}
-	]`
+	all_colors_str = `[ {red:248, green:9, blue:43}, {red:9, green:19, blue:248}, {red:14, green:248, blue:9}, {red:228 green:248, blue:9} ]`
 )
 
 const (
@@ -171,12 +178,13 @@ type Spinner struct {
 	parts_image_names []string
 	parts_images      []*canvas.Image
 	// Dots
-	dots []*canvas.Circle
+	play_dots []*canvas.Circle
 	// Colors
 	all_colors []Color
 	// Speed
-	speed_setting        int
-	speed_seconds        int
+	//speed_setting        int
+	//speed_seconds        int
+	speed                float64 // 1.0 to 60.0 seconds between spins
 	speed_ticks_per_play int
 	// Window
 	cur_w, cur_h       int
@@ -186,10 +194,23 @@ type Spinner struct {
 	centering_top_adj  int
 	black_out_top      int
 	// Color
-	cur_color_num int
-	cur_part      int
+	cur_color      CalledColor
+	cur_part       int
+	next_cur_color int // 0-3
 	// Canvas
 	canvas_size fyne.Size
+	// Called Colors
+	called_images []*canvas.Image
+	// Record Parts
+	left_hand_color  CalledColor
+	left_foot_color  CalledColor
+	right_hand_color CalledColor
+	right_foot_color CalledColor
+	// Record Dots
+	lh_dots []*canvas.Circle
+	lf_dots []*canvas.Circle
+	rh_dots []*canvas.Circle
+	rf_dots []*canvas.Circle
 }
 
 type Color struct {
@@ -215,6 +236,17 @@ func NewColor(r, g, b uint8) Color {
 	}
 	return c
 }
+
+/*
+func NewColor() Color {
+	c := Color{
+		Red:   0,
+		Green: 0,
+		Blue:  0,
+	}
+	return c
+}
+*/
 
 func NewPoint(set_x, set_y float64) Point {
 	p := Point{
@@ -343,15 +375,15 @@ func (m *Spinner) UpdateSpinner() {
 			new_spinner_image_num = 0
 		} else if m.spinner_mode == 1 {
 			// Spin
-			new_spinner_image_num = m.tick
+			new_spinner_image_num = m.tick / 10
 		} else if m.spinner_mode == 2 {
 			// Reverse Spin
-			new_spinner_image_num = 47 - m.tick
+			new_spinner_image_num = 47 - (m.tick / 10)
 		} else if m.spinner_mode == 3 {
 			// x3 Spin
-			new_spinner_image_num = ((m.tick * 3) % 48)
+			new_spinner_image_num = ((m.tick / 10 * 3) % 48)
 		} else if m.spinner_mode == 4 {
-			new_spinner_image_num = (m.spinner_wiggle[m.tick])
+			new_spinner_image_num = (m.spinner_wiggle[(m.tick/10)%48])
 		} else {
 			panic(1)
 		}
@@ -360,57 +392,122 @@ func (m *Spinner) UpdateSpinner() {
 	m.cur_spinner_image = new_spinner_image_num
 }
 
+func (m *Spinner) BuildDot(cc CalledColor) *canvas.Circle {
+	var nc color.NRGBA
+	if cc == CCRed {
+		nc = color.NRGBA{m.all_colors[0].Red, m.all_colors[0].Green, m.all_colors[0].Blue, 0xff}
+	} else if cc == CCGreen {
+		nc = color.NRGBA{m.all_colors[1].Red, m.all_colors[1].Green, m.all_colors[1].Blue, 0xff}
+	} else if cc == CCBlue {
+		nc = color.NRGBA{m.all_colors[2].Red, m.all_colors[2].Green, m.all_colors[2].Blue, 0xff}
+	} else if cc == CCYellow {
+		nc = color.NRGBA{m.all_colors[3].Red, m.all_colors[3].Green, m.all_colors[3].Blue, 0xff}
+	} else {
+		panic(1)
+	}
+	c := canvas.NewCircle(nc)
+	c.Resize(fyne.NewSize(100, 100))
+	c.Hide()
+	return c
+}
+
+func (m *Spinner) ShowDot(play bool, part_num int, color_num int) {
+	if play {
+		m.play_dots[m.next_cur_color].Show()
+	} else {
+		if part_num == 0 {
+			m.lh_dots[color_num].Show()
+		} else if part_num == 1 {
+			m.lf_dots[color_num].Show()
+		} else if part_num == 2 {
+			m.rf_dots[color_num].Show()
+		} else if part_num == 3 {
+			m.rh_dots[color_num].Show()
+		}
+	}
+}
 func (m *Spinner) UpdatePlay() {
-	var dot_num int
 	if m.tick == 0 {
 		// Hide All
 		// Hide Parts
 		for part_num := range 4 {
 			m.parts_images[part_num].Hide()
 		}
-		// Hide Dots
-		for dot_num := range 10 {
+		// Hide play Dots
+		for dot_num := range 4 {
 			// Hide Dot for current color
-			m.dots[dot_num].Hide()
+			m.play_dots[dot_num].Hide()
 		}
-	} else if m.tick == 10 {
+		m.cur_part = rand.Intn(4)
+		m.next_cur_color = rand.Intn(4)
+	} else if m.tick == 5*int(m.speed) {
 		fmt.Print("Show Part")
 		// Show part
 		m.parts_images[m.cur_part].Show()
-		m.parts_images[m.cur_part].Refresh()
+		//m.parts_images[m.cur_part].Refresh()
 		//m.parts_images[m.cur_part].Show()
-	} else if m.tick > 50 {
-		if m.tick%50 == 0 {
-			fmt.Print("Show Dot")
-			// Draw dot
-			dot_num = (m.tick / 50 % 10)
-			m.dots[dot_num].Show()
-			//m.dots[dot_num].Refresh()
+	} else if m.tick == 25*int(m.speed) || (m.tick == 30*int(m.speed)) {
+		//fmt.Printf("Show Dot : %d : %d \n", m.cur_part, m.next_cur_color)
+		// Draw dot
+		fyne.Do(func() { m.ShowDot(true, 0, m.next_cur_color) })
+		if m.cur_part == 0 {
+			for cdot := range 4 {
+				m.lh_dots[cdot].Hide()
+			}
+			//m.lh_dots[m.next_cur_color].Show()
+			fyne.Do(func() { m.ShowDot(false, 0, m.next_cur_color) })
+		} else if m.cur_part == 1 {
+			for cdot := range 4 {
+				m.lf_dots[cdot].Hide()
+			}
+			//m.lf_dots[m.next_cur_color].Show()
+			fyne.Do(func() { m.ShowDot(false, 1, m.next_cur_color) })
+		} else if m.cur_part == 2 {
+			for cdot := range 4 {
+				m.rf_dots[cdot].Hide()
+			}
+			//m.rf_dots[m.next_cur_color].Show()
+			fyne.Do(func() { m.ShowDot(false, 2, m.next_cur_color) })
+		} else if m.cur_part == 3 {
+			for cdot := range 4 {
+				m.rh_dots[cdot].Hide()
+			}
+			//m.rh_dots[m.next_cur_color].Show()
+			fyne.Do(func() { m.ShowDot(false, 3, m.next_cur_color) })
 		}
 	}
 }
 
+func (m *Spinner) ResizeCanvas(s fyne.Size) {
+	fmt.Print("Resize")
+	m.cur_h = int(s.Height)
+	m.cur_w = int(s.Width)
+}
+
 func (m *Spinner) UpdateSome(s fyne.Size) {
+	if (s.Height != float32(m.cur_h)) || (s.Width != float32(m.cur_w)) {
+		m.ResizeCanvas(s)
+	}
 	//fmt.Print(m.mode)
 	m.canvas_size = s
-	fmt.Print(s, "\n")
+	//fmt.Print(s, "\n")
 	if m.mode == 0 {
 		//fmt.Print(m.spinner_mode)
 		//fmt.Print(m.tick)
 		m.UpdateSpinner()
-		m.tick = (m.tick + 1) % 49
+		m.tick = (m.tick + 1) % 480
 		if m.tick == 0 {
 			//m.spinner_mode = math.rand.Int() % 4
 			m.spinner_mode = (m.spinner_mode + 1) % 5
 		}
 	} else if m.mode == 1 {
-		fmt.Print(m.tick)
+		//fmt.Print(m.tick)
 		m.UpdatePlay()
 		// Tick Update
 		m.tick = (m.tick + 1) % m.speed_ticks_per_play
-		if m.tick == 0 {
-			m.cur_part = (m.cur_part + 1) % 4
-		}
+		//if m.tick == 0 {
+		//	m.cur_part = (m.cur_part + 1) % 4
+		//}
 	}
 }
 
@@ -419,6 +516,9 @@ func (m *Spinner) GetSpinnerImage(image_num int) *canvas.Image {
 }
 
 func (m *Spinner) DoPlay() {
+	//
+
+	m.next_cur_color = rand.Intn(4)
 	// Set mode
 	m.mode = 1
 	// reset timer
@@ -428,6 +528,10 @@ func (m *Spinner) DoPlay() {
 	// Hide Spinner
 	for spinner_image_number := range 48 {
 		m.spinner_images[spinner_image_number].Hide()
+	}
+	// Show Called Parts
+	for called_part := range 4 {
+		m.called_images[called_part].Show()
 	}
 }
 
@@ -455,17 +559,28 @@ func NewSpinner() Spinner {
 		// Colors
 		//all_colors	    []Color
 		// Speed
-		speed_setting:        1,
-		speed_seconds:        1,   // FIXME: Ignored
-		speed_ticks_per_play: 500, // FIXME: Make configurable
+		//		speed_setting:        1,
+		//		speed_seconds:        1,   // FIXME: Ignored
+		speed_ticks_per_play: 200,
 		// Window
 		//cur_w, cur_h    int
 		// Color
-		cur_color_num: 0,
-		cur_part:      0,
+		cur_color: CCBlack,
+		cur_part:  0,
+		// Record Colors
+		left_hand_color:  CCBlack,
+		left_foot_color:  CCBlack,
+		right_hand_color: CCBlack,
+		right_foot_color: CCBlack,
 	}
+	m.all_colors = append(m.all_colors, NewColor(248, 9, 43))  // Red
+	m.all_colors = append(m.all_colors, NewColor(9, 19, 248))  // Blue
+	m.all_colors = append(m.all_colors, NewColor(14, 248, 9))  // Green
+	m.all_colors = append(m.all_colors, NewColor(228, 248, 9)) // Yellow
 	/*
-		err := json.Unmarshal([]byte(all_colors_str), &m.all_colors)
+		 Doesn't work for some reason
+		var all_colors []Color
+		err := json.Unmarshal([]byte(all_colors_str), &all_colors)
 		if err != nil {
 			fmt.Printf("Unable to marshal JSON due to %s", err)
 			panic(1)
@@ -507,7 +622,13 @@ func NewSpinner() Spinner {
 	for part_num, img_name := range m.parts_image_names {
 		m.parts_images = append(m.parts_images, canvas.NewImageFromFile(img_name))
 		m.parts_images[part_num].Hide()
-		m.parts_images[part_num].SetMinSize(fyne.NewSize(100, 200))
+		//m.parts_images[part_num].SetMinSize(fyne.NewSize(100, 200))
+		m.parts_images[part_num].SetMinSize(fyne.NewSize(200, 200))
+		// Called Images
+		m.called_images = append(m.called_images, canvas.NewImageFromFile(img_name))
+		m.called_images[part_num].Hide()
+		//m.called_images[part_num].SetMinSize(fyne.NewSize(25, 50))
+		m.called_images[part_num].SetMinSize(fyne.NewSize(50, 50))
 	}
 	err = json.Unmarshal([]byte(all_image_width_str), &m.parts_image_x)
 	if err != nil {
@@ -519,19 +640,38 @@ func NewSpinner() Spinner {
 		fmt.Printf("Unable to marshal JSON due to %s", err)
 	}
 	// Dots
-	for dot_num := range 10 {
-		m.dots = append(m.dots, canvas.NewCircle(color.NRGBA{
-			//	m.all_colors[0].Red,
-			//	m.all_colors[0].Green,
-			//	m.all_colors[0].Blue, 0xff}))
-			0xf0,
-			0x00,
-			0x00,
-			0xff}))
-		m.dots[dot_num].Hide()
-		m.dots[dot_num].Move(fyne.NewPos(30.0, 30.0))
-		m.dots[dot_num].Resize(fyne.NewSize(40.0, 40.0))
+	for play_dot_num := range 4 {
+		if play_dot_num == int(CCRed) {
+			m.play_dots = append(m.play_dots, m.BuildDot(CCRed))
+			m.lh_dots = append(m.lh_dots, m.BuildDot(CCRed))
+			m.lf_dots = append(m.lf_dots, m.BuildDot(CCRed))
+			m.rh_dots = append(m.rh_dots, m.BuildDot(CCRed))
+			m.rf_dots = append(m.rf_dots, m.BuildDot(CCRed))
+		} else if play_dot_num == int(CCGreen) {
+			m.play_dots = append(m.play_dots, m.BuildDot(CCGreen))
+			m.lh_dots = append(m.lh_dots, m.BuildDot(CCGreen))
+			m.lf_dots = append(m.lf_dots, m.BuildDot(CCGreen))
+			m.rh_dots = append(m.rh_dots, m.BuildDot(CCGreen))
+			m.rf_dots = append(m.rf_dots, m.BuildDot(CCGreen))
+		} else if play_dot_num == int(CCBlue) {
+			m.play_dots = append(m.play_dots, m.BuildDot(CCBlue))
+			m.lh_dots = append(m.lh_dots, m.BuildDot(CCBlue))
+			m.lf_dots = append(m.lf_dots, m.BuildDot(CCBlue))
+			m.rh_dots = append(m.rh_dots, m.BuildDot(CCBlue))
+			m.rf_dots = append(m.rf_dots, m.BuildDot(CCBlue))
+		} else if play_dot_num == int(CCYellow) {
+			m.play_dots = append(m.play_dots, m.BuildDot(CCYellow))
+			m.lh_dots = append(m.lh_dots, m.BuildDot(CCYellow))
+			m.lf_dots = append(m.lf_dots, m.BuildDot(CCYellow))
+			m.rh_dots = append(m.rh_dots, m.BuildDot(CCYellow))
+			m.rf_dots = append(m.rf_dots, m.BuildDot(CCYellow))
+		} else {
+			panic(1)
+		}
 	}
+	// speed
+	m.speed = 5.0 // 5 seconds per spin
+	m.speed_ticks_per_play = int(m.speed) * 100
 	return m
 }
 
@@ -545,7 +685,13 @@ func main() {
 	bannerContent := container.New(layout.NewHBoxLayout())
 	colOneContent := container.New(layout.NewVBoxLayout())
 	play_stack := container.New(layout.NewStackLayout())
+	calledHBox := container.New(layout.NewHBoxLayout())
+	lhstack := container.New(layout.NewStackLayout())
+	lfstack := container.New(layout.NewStackLayout())
+	rhstack := container.New(layout.NewStackLayout())
+	rfstack := container.New(layout.NewStackLayout())
 	play_rect := canvas.NewRectangle(color.Black)
+	play_vbox := container.New(layout.NewVBoxLayout())
 
 	// Spinner
 	mySpinner := NewSpinner()
@@ -629,9 +775,39 @@ func main() {
 			myPlayWindow.ShowAndRun()
 		*/
 	})
+	menuItemSpeedSettings := fyne.NewMenuItem("Speed Settings", func() {
+		var popup *widget.PopUp
+		new_speed := float64(mySpinner.speed)
+		speedSettingsText := widget.NewLabel("Speed Settings (1 to 60 seconds per spin)")
+		speedSettingsSlider := widget.NewSlider(1.0, 60.0)
+		speedSettingsSlider.SetValue(float64(mySpinner.speed))
+		speedSettingsSlider.OnChanged = func(s float64) {
+			//cp.DbgPrint("Speed Settings Callback:", s)
+			new_speed = s
+		}
+		popUpContent := container.NewVBox(
+			speedSettingsText,
+			speedSettingsSlider,
+			container.NewHBox(
+				layout.NewSpacer(),
+				widget.NewButton("Ok", func() {
+					mySpinner.speed = new_speed
+					mySpinner.speed_ticks_per_play = 100 * int(new_speed)
+					// fine grain pan
+					popup.Hide()
+				}),
+				widget.NewButton("Cancel", func() {
+					popup.Hide()
+				}),
+				layout.NewSpacer(),
+			),
+		)
+		popup = widget.NewModalPopUp(popUpContent, myWindow.Canvas())
+		popup.Show()
+	})
 	//	menuControl:= fyne.NewMenu("Control", menuItemColor, menuItemZoom, menuItemQuit);
 	//menuControl := fyne.NewMenu("Control", menuItemGenerate, menuItemQuit)
-	menuControl := fyne.NewMenu("Control", menuItemPlay, menuItemQuit)
+	menuControl := fyne.NewMenu("Control", menuItemPlay, menuItemSpeedSettings, menuItemQuit)
 	// About Menu Set up
 	menuItemAbout := fyne.NewMenuItem("About...", func() {
 		dialog.ShowInformation("About Spinner v1.0.0", "Author: Craig Warner \n\ngithub.com/craig-warner/spinner-fyne", myWindow)
@@ -682,14 +858,43 @@ func main() {
 	part_stack := container.New(layout.NewStackLayout())
 	part_vbox := container.New(layout.NewVBoxLayout())
 	part_hbox := container.New(layout.NewHBoxLayout())
-	// Dots
-	for dot_num := range 10 {
-		play_stack.Add(mySpinner.dots[dot_num])
+	// Phay Dots
+	for dot_num := range 4 {
+		play_stack.Add(mySpinner.play_dots[dot_num])
 	}
 	// Parts
 	for part_num := range 4 {
 		part_stack.Add(mySpinner.parts_images[part_num])
 	}
+	// Called HBox
+	// Called Stacks
+	// lh
+	for lh_dot_num := range 4 {
+		lhstack.Add(mySpinner.lh_dots[lh_dot_num])
+	}
+	lhstack.Add(mySpinner.called_images[0])
+	// lf
+	for lf_dot_num := range 4 {
+		lfstack.Add(mySpinner.lf_dots[lf_dot_num])
+	}
+	lfstack.Add(mySpinner.called_images[1])
+	// rf
+	for rf_dot_num := range 4 {
+		rfstack.Add(mySpinner.rf_dots[rf_dot_num])
+	}
+	rfstack.Add(mySpinner.called_images[2])
+	// rh
+	for rh_dot_num := range 4 {
+		rhstack.Add(mySpinner.rh_dots[rh_dot_num])
+	}
+	rhstack.Add(mySpinner.called_images[3])
+	// place record stacks
+	calledHBox.Add(lhstack)
+	calledHBox.Add(lfstack)
+	calledHBox.Add(layout.NewSpacer())
+	calledHBox.Add(rfstack)
+	calledHBox.Add(rhstack)
+	//
 	part_hbox.Add(layout.NewSpacer())
 	part_hbox.Add(part_stack)
 	part_hbox.Add(layout.NewSpacer())
@@ -697,6 +902,8 @@ func main() {
 	part_vbox.Add(part_hbox)
 	part_vbox.Add(layout.NewSpacer())
 	play_stack.Add(part_vbox)
+	play_vbox.Add(play_stack)
+	play_vbox.Add(calledHBox)
 	//fyne_size := fyne.NewSize(10.0, 10.0)
 	//image_holder.Resize(fyne_size)
 	bannerContent.Add(layout.NewSpacer())
@@ -720,7 +927,7 @@ func main() {
 	for part_num := range 4 {
 		big_stack.Add(mySpinner.parts_images[part_num])
 	}
-	big_stack.Add(play_stack)
+	big_stack.Add(play_vbox)
 	bigger_stack.Add(big_stack)
 
 	wholeContent := container.New(layout.NewVBoxLayout())
@@ -737,7 +944,7 @@ func main() {
 		for {
 			canvas_size = myWindow.Canvas().Size()
 			mySpinner.UpdateSome(canvas_size)
-			time.Sleep(time.Nanosecond * 100000000)
+			time.Sleep(time.Nanosecond * 10000000)
 			fyne.Do(func() {
 				big_stack.Refresh()
 			})
