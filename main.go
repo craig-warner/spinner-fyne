@@ -161,6 +161,9 @@ type Spinner struct {
 	// 1 playing
 	spinner_mode int // 0-4
 	tick         int // 0-48
+	// Background Rectangles
+	rect      *canvas.Rectangle
+	play_rect *canvas.Rectangle
 	// Spinner
 	spinner_wiggle      []int
 	cur_spinner_image   int
@@ -479,14 +482,23 @@ func (m *Spinner) UpdatePlay() {
 	}
 }
 
+func (m *Spinner) DoResizeCanvas(s fyne.Size) {
+	fmt.Print(s)
+	m.rect.SetMinSize(fyne.NewSize(s.Width, s.Height-28))
+	m.rect.Resize(fyne.NewSize(s.Width, s.Height-28))
+	//m.play_rect.SetMinSize(fyne.NewSize(s.Width, s.Height-28))
+	//m.play_rect.Resize(fyne.NewSize(s.Width, s.Height-28))
+}
+
 func (m *Spinner) ResizeCanvas(s fyne.Size) {
-	fmt.Print("Resize")
-	m.cur_h = int(s.Height)
+	//fmt.Print("Resize")
+	m.cur_h = int(s.Height) - 28
 	m.cur_w = int(s.Width)
+	fyne.Do(func() { m.DoResizeCanvas(s) })
 }
 
 func (m *Spinner) UpdateSome(s fyne.Size) {
-	if (s.Height != float32(m.cur_h)) || (s.Width != float32(m.cur_w)) {
+	if ((s.Height - 28) != float32(m.cur_h)) || (s.Width != float32(m.cur_w)) {
 		m.ResizeCanvas(s)
 	}
 	//fmt.Print(m.mode)
@@ -718,12 +730,12 @@ func main() {
 	lfstack := container.New(layout.NewStackLayout())
 	rhstack := container.New(layout.NewStackLayout())
 	rfstack := container.New(layout.NewStackLayout())
-	play_rect := canvas.NewRectangle(color.Black)
 	play_vbox := container.New(layout.NewVBoxLayout())
 
 	// Spinner
 	mySpinner := NewSpinner()
 
+	mySpinner.play_rect = canvas.NewRectangle(color.Black)
 	// Parts
 	/*
 		for part_num := range 4 {
@@ -747,7 +759,7 @@ func main() {
 	// - Mobile platforms are always full screen
 	// - 27 is a hack determined by Ubuntu/Gnome
 	//myWindow.Resize(fyne.NewSize(256, (256 + 27)))
-	myWindow.Resize(fyne.NewSize(WINDOW_SIZE, (WINDOW_SIZE + 27)))
+	myWindow.Resize(fyne.NewSize(WINDOW_SIZE, (WINDOW_SIZE + 28)))
 	//myPlayWindow.Resize(fyne.NewSize(WINDOW_SIZE, (WINDOW_SIZE + 27)))
 
 	// Control Menu Set up
@@ -791,7 +803,7 @@ func main() {
 			part_vbox.Add(layout.NewSpacer())
 			play_stack.Add(part_vbox)
 		*/
-		play_rect.Show()
+		mySpinner.play_rect.Show()
 		mySpinner.DoPlay()
 		/*
 			go func() {
@@ -849,11 +861,11 @@ func main() {
 	//colOneContent.Add(myRaster)
 	bigger_stack := container.New(layout.NewStackLayout())
 	big_stack := container.New(layout.NewStackLayout())
-	rect := canvas.NewRectangle(color.Black)
-	rect.SetMinSize(fyne.NewSize(WINDOW_SIZE, WINDOW_SIZE))
-	rect.Show()
-	big_stack.Add(rect)
-	bigger_stack.Add(rect)
+	mySpinner.rect = canvas.NewRectangle(color.Black)
+	mySpinner.rect.SetMinSize(fyne.NewSize(WINDOW_SIZE, WINDOW_SIZE))
+	mySpinner.rect.Show()
+	big_stack.Add(mySpinner.rect)
+	bigger_stack.Add(mySpinner.rect)
 
 	var image_holder *canvas.Image
 	//var image_holders []*canvas.Image
@@ -876,13 +888,13 @@ func main() {
 
 	image_holder = canvas.NewImageFromFile("assets/images/banner/touchtostart.png")
 	//image_holder.FillMode = canvas.ImageFillContain // Does not work
-	image_holder.SetMinSize(fyne.NewSize(270, 230))
+	image_holder.SetMinSize(fyne.NewSize(270, 61))
 	image_holder.Show()
 	mySpinner.banner_image = image_holder
 	// Play
-	play_rect.SetMinSize(fyne.NewSize(WINDOW_SIZE, WINDOW_SIZE))
-	play_rect.Hide()
-	play_stack.Add(play_rect)
+	mySpinner.play_rect.SetMinSize(fyne.NewSize(WINDOW_SIZE, WINDOW_SIZE))
+	mySpinner.play_rect.Hide()
+	play_stack.Add(mySpinner.play_rect)
 	part_stack := container.New(layout.NewStackLayout())
 	part_vbox := container.New(layout.NewVBoxLayout())
 	part_hbox := container.New(layout.NewHBoxLayout())
@@ -941,8 +953,8 @@ func main() {
 	//SomeText := widget.NewLabel("Some Text")
 	//colOneContent.Add(SomeText)
 	colOneContent.Add(layout.NewSpacer())
-	colOneContent.Add(spinnerContent)
 	colOneContent.Add(bannerContent)
+	colOneContent.Add(spinnerContent)
 	colOneContent.Add(layout.NewSpacer())
 
 	topContent := container.New(layout.NewHBoxLayout())
