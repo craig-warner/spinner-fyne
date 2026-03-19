@@ -47,7 +47,7 @@ sudo make install
 # Building .apk for Android Studio
 ## msys-x64
 ```
-fyne package -os android -appID com.example.spinner -ic* Image Format Selection
+fyne package -os android -appID com.example.spinner -icon assets/twister-spinner.png
 ```
  
 # Installing .apk to Android Studio
